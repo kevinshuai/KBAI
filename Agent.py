@@ -10,7 +10,7 @@
 
 # Install Pillow and uncomment this line to access image processing.
 #from PIL import Image
-#import numpy
+import numpy
 
 class Agent:
     # The default constructor for your Agent. Make sure to execute any
