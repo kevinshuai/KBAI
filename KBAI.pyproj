@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{68240b5d-72c1-40bc-bf84-a0f10a27e794}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>submit.py</StartupFile>
+    <StartupFile>RavensProject.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -62,6 +62,12 @@
     <Content Include="API\resources\titlebar.gif" />
     <Content Include="API\resources\titlebar_end.gif" />
     <Content Include="API\stylesheet.css" />
+    <Content Include="bonnie\.git" />
+    <Content Include="bonnie\.gitignore" />
+    <Content Include="bonnie\FAQ.md" />
+    <Content Include="bonnie\README.md" />
+    <Content Include="bonnie\submission.pyc" />
+    <Content Include="bonnie\__init__.pyc" />
     <Content Include="language.txt" />
     <Content Include="Problems\Basic Problems B\Basic Problem B-01\1.png" />
     <Content Include="Problems\Basic Problems B\Basic Problem B-01\2.png" />
@@ -1731,6 +1737,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Agent.py" />
+    <Compile Include="bonnie\submission.py" />
+    <Compile Include="bonnie\__init__.py" />
     <Compile Include="ProblemSet.py" />
     <Compile Include="RavensFigure.py" />
     <Compile Include="RavensGrader.py" />
@@ -1745,6 +1753,7 @@
     <Folder Include="API\ravensproject" />
     <Folder Include="API\ravensproject\class-use" />
     <Folder Include="API\resources" />
+    <Folder Include="bonnie\" />
     <Folder Include="Problems" />
     <Folder Include="Problems\Basic Problems B" />
     <Folder Include="Problems\Basic Problems B\Basic Problem B-01" />
