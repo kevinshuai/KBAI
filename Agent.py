@@ -44,8 +44,11 @@ class Agent:
         # Solve 2x2 matrices
         if problem.problemType == "2x2":
             self.Open2x2Figures()
+            print self.rpm.name
 
             best_answer, best_confidence_rating = self.Solve2x2RPM()
+
+            print " Answer: ", best_answer, " Confidence: ", best_confidence_rating
         # Solve 3x3 matrices
         elif problem.problemType == "3x3":
             self.Open3x3Figures()
@@ -63,37 +66,57 @@ class Agent:
     def Solve2x2RPM(self):
         best_answer = -1
         confidence = 0.0
-        best_AB_transformation = "NoTransform"
-        best_AC_transformation = "NoTransform"
+        best_AB_transformation = "NoMatch"
+        best_AC_transformation = "NoMatch"
 
         # Find A to B transformation
         best_AB_transformation, AB_confidence = self.FindA2BTransform()
 
+        print best_AB_transformation
+
         # Find A to C transformation
+        print "  Finding best AC transform..."
         best_AC_transformation, AC_confidence = self.FindA2CTransform()
 
         # Apply given transforms and compare to answers, returning best one
-        best_answer, confidence = self.ApplyBestTransforms(best_AB_transformation, best_AC_transformation)  
+        simple_answer, simple_confidence = self.ApplyBestTransforms(best_AB_transformation, best_AC_transformation)  
+
+        # The above methods allow for simple transformations between A and B and A and C
+        # This essentially treats them as separate 2x1 problems which are then combined later
+        # This works for many problems but not all. Sometimes a more complicated transformation is
+        # required. These will be handled here
+        complex_answer, complex_confidence = self.HandleNoMatch(best_AB_transformation, best_AC_transformation)
+
+        if complex_confidence > simple_confidence:
+            best_answer = complex_answer
+            confidence = complex_confidence
+        else:
+            best_answer = simple_answer
+            confidence = simple_confidence
     
+        # TODO: What about multiple correct answers?
+        # Resolve using confidence values?
+
         return best_answer, confidence
     #end def
 
     # Finds the best transform between A and B for a 2x2 matrix
     def FindA2BTransform(self):
-        best_transform, confidence = self.FindBestTransformation(self.A, self.B)
+        best_transform, confidence = self.FindBestSimpleTransformation(self.A, self.B)
 
         return best_transform, confidence
     #end def
 
     # Finds the best transformation between A and C for a 2x2 matrix
     def FindA2CTransform(self):
-        best_transform, confidence = self.FindBestTransformation(self.A, self.C)
+        best_transform, confidence = self.FindBestSimpleTransformation(self.A, self.C)
 
         return best_transform, confidence
     #end def
 
-    def FindBestTransformation(self, imgA, imgB):
-        best_transform = "NoTransformation"
+    # Only handles simple geometric transforms
+    def FindBestSimpleTransformation(self, imgA, imgB):
+        best_transform = "NoMatch"
         least_diff = 1.0
         imgA_xform = imgA
 
@@ -104,16 +127,22 @@ class Agent:
             best_transform = "NoTransformation"
 
         # Rotation
-        # 90 CW
+        # 90 CCW
         imgA_xform = imgA.rotate(90)
         diff = self.Compare2Images(imgA_xform, imgB)
+        if "B-06" in self.rpm.name:
+            print "    Rotation CCW: ", diff
+            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "Rotation90CW"
 
-        # 90 CCW
+        # 90 CW
         imgA_xform = imgA.rotate(270)
         diff = self.Compare2Images(imgA_xform, imgB)
+        if "B-06" in self.rpm.name:
+            print "    Rotation CW: ", diff
+            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "Rotation90CCW"
@@ -122,6 +151,9 @@ class Agent:
         # Vertical reflection - along vertical axis
         imgA_xform = imgA.transpose(Image.FLIP_LEFT_RIGHT)
         diff = self.Compare2Images(imgA_xform, imgB)
+        if "B-06" in self.rpm.name:
+            print "    Reflection vertical: ", diff
+            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "ReflectionVertical"
@@ -129,14 +161,27 @@ class Agent:
         # Horizontal reflection - along horizontal axis  
         imgA_xform = imgA.transpose(Image.FLIP_TOP_BOTTOM)
         diff = self.Compare2Images(imgA_xform, imgB)
+        if "B-06" in self.rpm.name:
+            print "    Reflection horiz: ", diff
+            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "ReflectionHorizontal"  
 
         # And
 
-        # OR    
+        # OR 
+
+   
         confidence = 1.0 - least_diff
+        
+        # If no transformation has a confidence greater than 99%, then this information
+        # is useless. None of the simply trasforms should be attempted. It will only
+        # lead to bad results
+        if confidence < 0.99:
+            best_transform = "NoMatch"
+            confidence = 0.0
+        
         return best_transform, confidence
     #end def
 
@@ -185,9 +230,9 @@ class Agent:
 
         if transform == "NoTransformation":
             xform_img = image
-        elif transform == "Rotation90CW":
-            xform_img = image.rotate(90)
         elif transform == "Rotation90CCW":
+            xform_img = image.rotate(90)
+        elif transform == "Rotation90CW":
             xform_img = image.rotate(270)
         elif transform == "ReflectionVertical":
             xform_img = image.transpose(Image.FLIP_LEFT_RIGHT)
@@ -211,10 +256,8 @@ class Agent:
                 
                 if temp_diff < diff:
                     best_match = i
-                    diff = temp_diff
-                
+                    diff = temp_diff     
             #end for
-        #end if
         elif(mat_size == "3x3"):
             for i in range(1,9):
                 img_diff = ImageChops.difference(self.answers[str(i)], guess)
@@ -230,16 +273,12 @@ class Agent:
         img_diff = ImageChops.difference(imgA, imgB)
 
         # Get the size of the difference image
-        img_diff_size = img_diff.size[0] * img_diff.size[1]   
-
-        #img_diff.show()
+        img_diff_size = img_diff.size[0] * img_diff.size[1]  
 
         # TODO Do some cleanup to the image here
         # Some of the images don't perfectly line up so when the difference is taken there 
         # are some artifacts
         
-
-        # TODO Find the total number of pixels that are different (white)
         # http://codereview.stackexchange.com/questions/55902/fastest-way-to-count-non-zero-pixels-using-python-and-pillow
         num_pixels_diff = 0
         bbox = img_diff.getbbox()
@@ -256,6 +295,58 @@ class Agent:
         diff_percentage = float(num_pixels_diff)/img_diff_size  
 
         return diff_percentage
+    #end def
+
+    
+    # Finds the absolute value difference between two images
+    def FindImageDifference(self, imgA, imgB):
+        img_diff = ImageChops.difference(imgA, imgB)
+        return img_diff
+    #end def
+
+    # Handles cases where a simple transformation doesn't work
+    def HandleNoMatch(self, AB_xform, AC_xform):
+        confidence = 0.0
+        best_answer = -1
+
+        # Find image differences
+        AB_diff = ImageChops.difference(self.A, self.B)
+        AC_diff = ImageChops.difference(self.A, self.C)
+
+        # Break into cases
+        # If AB doesn't have a match and AC does
+        if AB_xform == "NoMatch" and AC_xform != "NoMatch":
+            # Apply the transformation from A to C to AB difference
+            AB_diff_xform = self.ApplyTransform(AB_diff, AC_xform)
+
+            # Add AB diff xform to C image
+            C_AB_diff_xform = ImageChops.add(self.C, AB_diff_xform)
+
+            # TODO: I might need a difference as well. It could be the case
+            # that A has something that B does not, so B removes something
+            # from A
+
+            # Compare to answers
+            best_answer, confidence = self.CompareGuessToAnswers(C_AB_diff_xform)
+
+        # If AB has a match and AC does not
+        elif AB_xform != "NoMatch" and AC_xform == "NoMatch":
+            # Apply AB xform to AC image difference
+            AC_diff_xform = self.ApplyTransform(AC_diff, AB_xform)
+
+            # Add AC xform to B image
+            B_AC_diff_xform = ImageChops.add(self.B, AC_diff_xform)
+
+            # Compare to answers
+            best_answer, confidence = self.CompareGuessToAnswers(B_AC_diff_xform)
+
+        # If neither AB nor AC have a match
+        elif AB_xform == "NoMatch" and AC_xform == "NoMatch":
+            best_answer = -1
+
+        # If both have a match don't do anything. Handled by simply transforms
+        
+        return best_answer, confidence
     #end def
 
 

@@ -3,5 +3,6 @@
 AgentAnswers.csv
 ProblemResults.csv
 SetResults.csv
+*.zip
 
 /.vs/KBAI/v14/.suo
