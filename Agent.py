@@ -48,7 +48,7 @@ class Agent:
 
             best_answer, best_confidence_rating = self.Solve2x2RPM()
 
-            print " Answer: ", best_answer, " Confidence: ", best_confidence_rating
+            print "  Answer: ", best_answer, " Confidence: ", best_confidence_rating
         # Solve 3x3 matrices
         elif problem.problemType == "3x3":
             self.Open3x3Figures()
@@ -72,11 +72,15 @@ class Agent:
         # Find A to B transformation
         best_AB_transformation, AB_confidence = self.FindA2BTransform()
 
-        print best_AB_transformation
+        if "B-07" in self.rpm.name:
+            print best_AB_transformation
 
         # Find A to C transformation
         print "  Finding best AC transform..."
         best_AC_transformation, AC_confidence = self.FindA2CTransform()
+
+        if "B-07" in self.rpm.name:
+            print best_AC_transformation
 
         # Apply given transforms and compare to answers, returning best one
         simple_answer, simple_confidence = self.ApplyBestTransforms(best_AB_transformation, best_AC_transformation)  
@@ -132,7 +136,6 @@ class Agent:
         diff = self.Compare2Images(imgA_xform, imgB)
         if "B-06" in self.rpm.name:
             print "    Rotation CCW: ", diff
-            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "Rotation90CW"
@@ -142,7 +145,6 @@ class Agent:
         diff = self.Compare2Images(imgA_xform, imgB)
         if "B-06" in self.rpm.name:
             print "    Rotation CW: ", diff
-            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "Rotation90CCW"
@@ -153,7 +155,6 @@ class Agent:
         diff = self.Compare2Images(imgA_xform, imgB)
         if "B-06" in self.rpm.name:
             print "    Reflection vertical: ", diff
-            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "ReflectionVertical"
@@ -163,7 +164,6 @@ class Agent:
         diff = self.Compare2Images(imgA_xform, imgB)
         if "B-06" in self.rpm.name:
             print "    Reflection horiz: ", diff
-            imgA_xform.show()
         if diff < least_diff:
             least_diff = diff
             best_transform = "ReflectionHorizontal"  
@@ -196,30 +196,55 @@ class Agent:
     # Also compares to the answer choices
     def ApplyBestTransforms(self, AB_transform, AC_transform):
         answer = -1
-        confidence = 0.0
+        answer1 = -1
+        answer2 = -1
+        answer3 = -1
+        answer4 = -1
 
+        confidence = 0.0
+        confidence1 = 0.0
+        confidence2 = 0.0
+        confidence3 = 0.0
+        confidence4 = 0.0
+        
         # Apply the AB transform to C
         AB_C_img = self.ApplyTransform(self.C, AB_transform)
         # See if that matches
-        temp_answer, temp_diff = self.CompareGuessToAnswers(AB_C_img)
-        if (1.0-temp_diff > confidence):
-            answer = temp_answer
-            confidence = 1.0-temp_diff
+        answer1, temp_diff = self.CompareGuessToAnswers(AB_C_img)
+        confidence1 = 1.0-temp_diff
 
         # Apply the AC transform to B
         AC_B_img = self.ApplyTransform(self.B, AC_transform)
         # See how well that matches
-        temp_answer, temp_diff = self.CompareGuessToAnswers(AC_B_img)
-        if (1.0-temp_diff > confidence):
-            answer = temp_answer
-            confidence = 1.0-temp_diff
+        answer2, temp_diff = self.CompareGuessToAnswers(AC_B_img)
+        confidence2 = 1.0 - temp_diff
 
-        # Apply AB then AC
+        # TODO: Apply AB then AC
         
 
-        # Apply AC then AB
+        # TODO: Apply AC then AB
 
 
+        # Pick the answer with the highest confidence value with some 
+        # wiggle room
+        if FuzzyCompare(confidence1, confidence2):
+            # Eliminate answers where there aren't good matches
+            if AB_transform == "NoMatch":
+                answer = answer2
+                confidence = confidence2
+            elif AC_transform == "NoMatch":
+                answer = answer1
+                confidence = confidence1
+            # If both have transforms, arbitrarily pick the AB one to dominate
+            else:
+                answer = answer1
+                confidence = confidence1
+        elif confidence1 > confidence2:
+            answer = answer1
+            confidence = confidence1
+        elif confidence2 > confidence1:
+            answer = answer2
+            confidence = confidence2            
 
         return answer, confidence
     #end def
@@ -310,6 +335,7 @@ class Agent:
         best_answer = -1
 
         # Find image differences
+        # This is absolute difference, so I will have to try addition and subtraction
         AB_diff = ImageChops.difference(self.A, self.B)
         AC_diff = ImageChops.difference(self.A, self.C)
 
@@ -322,12 +348,26 @@ class Agent:
             # Add AB diff xform to C image
             C_AB_diff_xform = ImageChops.add(self.C, AB_diff_xform)
 
+            # Compare to answers
+            answer_add, confidence_add = self.CompareGuessToAnswers(C_AB_diff_xform)
+
             # TODO: I might need a difference as well. It could be the case
             # that A has something that B does not, so B removes something
             # from A
+            
+            # Subtract AB_diff xform from C image
+            C_AB_diff_xform = ImageChops.subtract(self.C, AB_diff_xform)
 
             # Compare to answers
-            best_answer, confidence = self.CompareGuessToAnswers(C_AB_diff_xform)
+            answer_sub, confidence_sub = self.CompareGuessToAnswers(C_AB_diff_xform)
+
+            # Pick the one with greatest confidence
+            if confidence_add > confidence_sub:
+                best_answer = answer_add
+                confidence = confidence_add
+            else:
+                best_answer = answer_sub
+                confidence = confidence_sub            
 
         # If AB has a match and AC does not
         elif AB_xform != "NoMatch" and AC_xform == "NoMatch":
@@ -338,11 +378,43 @@ class Agent:
             B_AC_diff_xform = ImageChops.add(self.B, AC_diff_xform)
 
             # Compare to answers
-            best_answer, confidence = self.CompareGuessToAnswers(B_AC_diff_xform)
+            answer_add, confidence_add = self.CompareGuessToAnswers(B_AC_diff_xform)
+
+            # Do same for subtracting
+            B_AC_diff_xform = ImageChops.subtract(self.B, AC_diff_xform)
+
+            # Compare to answers
+            answer_sub, confidence_sub = self.CompareGuessToAnswers(B_AC_diff_xform)
+
+            # Pick the one with greatest confidence
+            if confidence_add > confidence_sub:
+                best_answer = answer_add
+                confidence = confidence_add
+            else:
+                best_answer = answer_sub
+                confidence = confidence_sub             
 
         # If neither AB nor AC have a match
         elif AB_xform == "NoMatch" and AC_xform == "NoMatch":
-            best_answer = -1
+            # There are a lot of combinations here. I am going to only do a few
+            
+            # Combo 1
+            # Take AB difference, add to C
+            C_AB_diff = ImageChops.add(self.C, AB_diff)           
+
+            # Take AC difference, add to B
+            B_AC_diff = ImageChops.add(self.B, AC_diff)
+
+            # Add two images
+            guess = ImageChops.add(C_AB_diff, B_AC_diff)
+
+            # Find closest match to anwswer
+            best_answer, confidence = self.CompareGuessToAnswers(guess)
+
+            # Combo 2
+            # Subtract the differences
+            C_AB_diff = ImageChops.subtract(self.C, AB_diff)
+            B_AC_diff = ImageChops.subtract(self.B, AC_diff)      
 
         # If both have a match don't do anything. Handled by simply transforms
         
@@ -387,3 +459,15 @@ class Agent:
 
 
 #end class
+
+
+# A method to compare two values with some "fuzzy" factor
+# Returns true of the values are approximately equal
+# Otherwise returns false
+def FuzzyCompare(value1, value2):
+    fuzz_factor = 0.05
+    
+    if value1 > value2 - fuzz_factor and value1 < value2 + fuzz_factor:
+        return True
+
+    return False
