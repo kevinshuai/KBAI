@@ -72,15 +72,8 @@ class Agent:
         # Find A to B transformation
         best_AB_transformation, AB_confidence = self.FindA2BTransform()
 
-        if "B-07" in self.rpm.name:
-            print best_AB_transformation
-
         # Find A to C transformation
-        print "  Finding best AC transform..."
         best_AC_transformation, AC_confidence = self.FindA2CTransform()
-
-        if "B-07" in self.rpm.name:
-            print best_AC_transformation
 
         # Apply given transforms and compare to answers, returning best one
         simple_answer, simple_confidence = self.ApplyBestTransforms(best_AB_transformation, best_AC_transformation)  
@@ -91,13 +84,24 @@ class Agent:
         # required. These will be handled here
         complex_answer, complex_confidence = self.HandleNoMatch(best_AB_transformation, best_AC_transformation)
 
-        if complex_confidence > simple_confidence:
-            best_answer = complex_answer
-            confidence = complex_confidence
+        # If the simple transformation has a NoMatch and the complex confidence is pretty close to 
+        # the simple confidence, favor the complex confidence
+        if best_AB_transformation == "NoMatch" or best_AC_transformation == "NoMatch":          
+            # If the two are about the same, favor complex
+            if FuzzyCompare(complex_confidence, simple_confidence):
+                best_answer = complex_answer
+                confidence = complex_confidence
+            elif complex_confidence > simple_confidence:
+                best_answer = complex_answer
+                confidence = complex_confidence
+            else:
+                best_answer = simple_answer
+                confidence = simple_confidence
+        # If there are two matches, just keep it simple
         else:
             best_answer = simple_answer
-            confidence = simple_confidence
-    
+            confidence = simple_confidence     
+            
         # TODO: What about multiple correct answers?
         # Resolve using confidence values?
 
@@ -134,8 +138,7 @@ class Agent:
         # 90 CCW
         imgA_xform = imgA.rotate(90)
         diff = self.Compare2Images(imgA_xform, imgB)
-        if "B-06" in self.rpm.name:
-            print "    Rotation CCW: ", diff
+        
         if diff < least_diff:
             least_diff = diff
             best_transform = "Rotation90CW"
@@ -143,8 +146,7 @@ class Agent:
         # 90 CW
         imgA_xform = imgA.rotate(270)
         diff = self.Compare2Images(imgA_xform, imgB)
-        if "B-06" in self.rpm.name:
-            print "    Rotation CW: ", diff
+        
         if diff < least_diff:
             least_diff = diff
             best_transform = "Rotation90CCW"
@@ -153,8 +155,7 @@ class Agent:
         # Vertical reflection - along vertical axis
         imgA_xform = imgA.transpose(Image.FLIP_LEFT_RIGHT)
         diff = self.Compare2Images(imgA_xform, imgB)
-        if "B-06" in self.rpm.name:
-            print "    Reflection vertical: ", diff
+        
         if diff < least_diff:
             least_diff = diff
             best_transform = "ReflectionVertical"
@@ -162,8 +163,7 @@ class Agent:
         # Horizontal reflection - along horizontal axis  
         imgA_xform = imgA.transpose(Image.FLIP_TOP_BOTTOM)
         diff = self.Compare2Images(imgA_xform, imgB)
-        if "B-06" in self.rpm.name:
-            print "    Reflection horiz: ", diff
+        
         if diff < least_diff:
             least_diff = diff
             best_transform = "ReflectionHorizontal"  
@@ -223,7 +223,6 @@ class Agent:
         
 
         # TODO: Apply AC then AB
-
 
         # Pick the answer with the highest confidence value with some 
         # wiggle room
@@ -331,8 +330,8 @@ class Agent:
 
     # Handles cases where a simple transformation doesn't work
     def HandleNoMatch(self, AB_xform, AC_xform):
-        confidence = 0.0
-        best_answer = -1
+        max_confidence = 0.0
+        best_answer = -1      
 
         # Find image differences
         # This is absolute difference, so I will have to try addition and subtraction
@@ -364,10 +363,10 @@ class Agent:
             # Pick the one with greatest confidence
             if confidence_add > confidence_sub:
                 best_answer = answer_add
-                confidence = confidence_add
+                _max_confidence = confidence_add
             else:
                 best_answer = answer_sub
-                confidence = confidence_sub            
+                max_confidence = confidence_sub            
 
         # If AB has a match and AC does not
         elif AB_xform != "NoMatch" and AC_xform == "NoMatch":
@@ -389,36 +388,62 @@ class Agent:
             # Pick the one with greatest confidence
             if confidence_add > confidence_sub:
                 best_answer = answer_add
-                confidence = confidence_add
+                max_confidence = confidence_add
             else:
                 best_answer = answer_sub
-                confidence = confidence_sub             
+                max_confidence = confidence_sub             
 
         # If neither AB nor AC have a match
         elif AB_xform == "NoMatch" and AC_xform == "NoMatch":
             # There are a lot of combinations here. I am going to only do a few
-            
+            answer_list = []
+            confidence_list = []
+                        
             # Combo 1
             # Take AB difference, add to C
-            C_AB_diff = ImageChops.add(self.C, AB_diff)           
+            C_plus_AB_diff = ImageChops.add(self.C, AB_diff)           
 
             # Take AC difference, add to B
-            B_AC_diff = ImageChops.add(self.B, AC_diff)
+            B_plus_AC_diff = ImageChops.add(self.B, AC_diff)
 
             # Add two images
-            guess = ImageChops.add(C_AB_diff, B_AC_diff)
+            guess = ImageChops.add(C_plus_AB_diff, B_plus_AC_diff)
 
             # Find closest match to anwswer
-            best_answer, confidence = self.CompareGuessToAnswers(guess)
+            answer, diff = self.CompareGuessToAnswers(guess)
+            answer_list.append(answer)
+            confidence_list.append(1.0-diff)
 
             # Combo 2
-            # Subtract the differences
-            C_AB_diff = ImageChops.subtract(self.C, AB_diff)
-            B_AC_diff = ImageChops.subtract(self.B, AC_diff)      
+            # Try just the individual additions
+            answer, diff = self.CompareGuessToAnswers(C_plus_AB_diff)
+            answer_list.append(answer)
+            confidence_list.append(1.0-diff)
 
+            answer, diff = self.CompareGuessToAnswers(B_plus_AC_diff)
+            answer_list.append(answer)
+            confidence_list.append(1.0-diff)
+
+            # Combo 3
+            # Subtract the differences
+            C_minus_AB_diff = ImageChops.subtract(self.C, AB_diff)
+            B_minus_AC_diff = ImageChops.subtract(self.B, AC_diff)   
+
+            answer, diff = self.CompareGuessToAnswers(C_minus_AB_diff)
+            answer_list.append(answer)
+            confidence_list.append(1.0-diff)
+
+            answer, diff = self.CompareGuessToAnswers(B_minus_AC_diff) 
+            answer_list.append(answer)
+            confidence_list.append(1.0-diff)
+                        
+            # Find max confidence and best answer
+            max_confidence = max(confidence_list)
+            best_answer = answer_list[confidence_list.index(max_confidence)]
+            
         # If both have a match don't do anything. Handled by simply transforms
-        
-        return best_answer, confidence
+                
+        return best_answer, max_confidence
     #end def
 
 
