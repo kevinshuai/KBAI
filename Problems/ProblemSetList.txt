@@ -1,4 +1,2 @@
 Basic Problems C
 Basic Problems D
-Challenge Problems C
-Challenge Problems D
