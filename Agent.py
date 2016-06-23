@@ -214,7 +214,16 @@ class Agent:
         if self.EqualAlongFirstTwoRows():
             guess_img =  self.G.copy()
             answer, diff = self.CompareGuessToAnswers(guess_img)
-            #print self.rpm.name, " ", answer
+            print self.rpm.name, " Equal along first 2 rows"
+            return answer, 1.0-diff
+
+        # Basic C-11, C-12
+        # If difference between A and B is equal to the difference between D and E is equal to the difference between G and H
+        if IsDifferenceSameAcrossRows(self.questions):
+            EF_diff = ImageChops.difference(self.E, self.F)
+            guess = ImageChops.subtract(self.H, EF_diff)
+            answer, diff = self.CompareGuessToAnswers(guess)
+            print self.rpm.name, " Difference same across rows"
             return answer, 1.0-diff
 
         # Case Basic C-07: Moving circle, stationary diamond
@@ -225,7 +234,7 @@ class Agent:
             guess = self.A.copy().rotate(180)
             answer, diff = self.CompareGuessToAnswers(guess)
             if FuzzyCompare(diff, 0.0, 0.02):
-                #print self.rpm.name, " ", answer
+                print self.rpm.name, " Basic C-07"
                 return answer, 1.0-diff
         
         # Case Basic C-08: Filled/Unfilled squares
@@ -238,11 +247,18 @@ class Agent:
             binaryH = self.H.copy().convert("1")
             guess = ImageChops.logical_and(rotatedF, binaryH)
             answer, diff = self.CompareGuessToAnswers(guess.convert("RGBA"))
-            #print self.rpm.name, " ", diff
             if FuzzyCompare(diff, 0.0, 0.05):
-                #print self.rpm.name, " ", answer
+                print self.rpm.name, " Basic C-08"
                 return answer, 1.0-diff
 
+        # Case Basic D-02: Shifting shapes - right
+        # Case Basic D-03
+        if IsRightShift(self.questions):
+            guess = self.A
+            answer, diff = self.CompareGuessToAnswers(guess)
+            print self.rpm.name, " Basic shift right"
+            return answer, 1.0-diff
+        
         # Case Basic C-02: Growing square
         # I don't have a good way to handle this. I need a way to create a new image rather
         # than just manipulate an existing one. This is hard to do since I don't know what is
@@ -255,6 +271,15 @@ class Agent:
         #   img = FindImageSameness(self.A, self.B)
         #   img.show()
 
+        # Case Basic C-05: Star with circles
+        # An AND of the images might work. 
+        # This also has some false positives. Might need to move it further down        
+        guess = self.ANDOfAllQuestions()
+        answer, diff = self.CompareGuessToAnswers(guess.convert("RGBA"))
+        if FuzzyCompare(diff, 0.0, 0.03):
+            print self.rpm.name, " AND of all questions"
+            return answer, 1.0-diff
+
         # Case Basic C-04: Intersecting circles
         # Case Basic C-06
         # Again, it looks like I would have to synthesize the answer
@@ -263,63 +288,26 @@ class Agent:
         '''
         I might need to rethink my image difference function. The percentages are just not fine enough to compare
         Or I can move this down to the bottom.
-        '''
-        
+        '''        
         guess, confidence = self.AllAnswersAppearInProblemButOne()
         if guess != -1:
+            print self.rpm.name, " All answers appear in problem but one"
             return guess, confidence 
-                 
-
-        # Case Basic C-05: Star with circles
-        # An AND of the images might work. 
-        # This also has some false positives. Might need to move it further down
-        
-        guess = self.ANDOfAllQuestions()
-        answer, diff = self.CompareGuessToAnswers(guess.convert("RGBA"))
-        if FuzzyCompare(diff, 0.0, 0.03):
-            return answer, 1.0-diff
-        
-
-        # Case Basic C-06: Growing square/rectangle
-        # Another case where all the answers appear in the question except for one
-        # Another option might be to pass a filter over the entire image. This could 
-        # generate the correct answer instead of just eliminating answers one by one
-
 
         # Case Basic C-09: Travelling triangles/stars
         # Bisect image. Combine image with halves swapped
         # This might need cleaned up a bit. It answers too many incorrectly
         guess = BisectAndSwap(self.G)
         answer, diff = self.CompareGuessToAnswers(guess)
-        #if "Basic Problem C-09" in self.rpm.name:
-        #    print answer, diff
+        # This is really fuzzy. It needs moved to the bottom
         if FuzzyCompare(diff, 0.0, 0.09):
-            #print self.rpm.name, answer
+            print self.rpm.name, " Bisect and swap"
             return answer, 1.0-diff
 
-        # Case Basic C-10: Multiplying diamonds
+        # Case Basic C-10: Multiplying spreading diamonds
         # B and D are rotations, C and G are rotations, F and H are rotations
         # Split C or G in half. Refection to get complete diamond, crop to get only the diamond
         # Combine new halves to get solution
-
-        # Case Basic C-11: Incremental diamonds
-        # Here the differences along rows is all that matters. I would find the difference
-        # between B and C or E and F and add that difference to H to find the answer
-
-        # Case Basic C-12: Filling squares
-        # This is like C-11. Only the actual difference along rows matters. Find actual 
-        # (not absolute) difference between B and C or E and F. Take that difference
-        # and subtract from H to produce answer. (Beware 7 as a false positive)
-
-        # Case Basic D-01: Similar to C-01 All rows are the same
-        # Simply copy G or H
-
-        # Case Basic D-02: Shifting shapes - right
-        # Here all the shapes shift from row to row. Lots of checks you can do here. Definitely
-        # make sure to check that A = E = ?
-
-        # Case Basic D-03: Shift shapes - right
-        # Same as above
 
         # Case Basic D-04: Heart, star,cross
         # Here I need to find what is the same along a column and find
@@ -858,31 +846,34 @@ def BisectAndSwap(image):
     return swap_img
 
 #*******************************************************************************
+# Returns true if the difference along the rows across columns is all the same
+# In other words, if A-B == D-E, etc.
+#*******************************************************************************
+def IsDifferenceSameAcrossRows(questions):
+    AB_diff = ImageChops.difference(questions[0], questions[1])
+    BC_diff = ImageChops.difference(questions[1], questions[2])
+    DE_diff = ImageChops.difference(questions[3], questions[4])
+    EF_diff = ImageChops.difference(questions[4], questions[5])
+    GH_diff = ImageChops.difference(questions[6], questions[7])
+
+    if FuzzyAreImagesEqual(AB_diff, DE_diff) and FuzzyAreImagesEqual(AB_diff, GH_diff) and FuzzyAreImagesEqual(DE_diff, GH_diff):
+       if FuzzyAreImagesEqual(BC_diff, EF_diff):
+           return True
+
+    return False
+
+#*******************************************************************************
 # Method to determine if set of images represents a circular right shift
 # Image images are a right shift, return true. Otherwise return false
 #*******************************************************************************
-def IsRightShift(imgA, imgB, imgE, imgF, imgG):
-    # I can add more comparisons latter, but I figure
-    # checking just a few of the pairs should suffice for now
+def IsRightShift(questions):
 
-    retval = False
-    no_diff = 0.0
+    if FuzzyAreImagesEqual(questions[0], questions[4], 0.05):
+        if FuzzyAreImagesEqual(questions[1], questions[5], 0.05) and FuzzyAreImagesEqual(questions[1], questions[6], 0.05) and FuzzyAreImagesEqual(questions[5], questions[6], 0.05):
+            if FuzzyAreImagesEqual(questions[2], questions[3], 0.05) and FuzzyAreImagesEqual(questions[2], questions[7], 0.05) and FuzzyAreImagesEqual(questions[3], questions[7], 0.05):
+                return True
 
-    # Compare A to E (diagonal)
-    AE_diff = Compare2Images(imgA, imgB)
-
-    # Compare B to F
-    BF_diff = Compare2Images(imgB, imgF)
-
-    # Compare F to G
-    FG_diff = Compare2Images(imgF, imgG)
-    
-    if FuzzyCompare(AE_diff, no_diff):
-        if FuzzyCompare(BF_diff, no_diff):
-            if FuzzyCompare(FG_diff, no_diff):
-                retval = True
-
-    return retval
+    return False
 
 #***************************************************************************************
 # Method to determine sameness (what is the same) between two images
