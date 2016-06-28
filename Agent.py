@@ -253,6 +253,7 @@ class Agent:
 
         # Case Basic D-02: Shifting shapes - right
         # Case Basic D-03
+        # Case Basic D-11
         if IsRightShift(self.questions):
             guess = self.A
             answer, diff = self.CompareGuessToAnswers(guess)
@@ -271,10 +272,33 @@ class Agent:
         #   img = FindImageSameness(self.A, self.B)
         #   img.show()
 
+        # Case Basic D-06: Shift right with sameness along row
+        # Find sameness along a row. Remove sameness from a row to get a shape. Determine
+        # if that shape shifts. If so, take sameness along bottom row and shifted image. 
+        AB_same = FindImageSameness(self.A, self.B)
+        BC_same = FindImageSameness(self.B, self.C)
+        DF_same = FindImageSameness(self.D, self.F)
+        EF_same = FindImageSameness(self.E, self.F)
+        if FuzzyAreImagesEqual(AB_same, BC_same) and FuzzyAreImagesEqual(DF_same, EF_same):
+            # We have established there is a pattern along rows
+            # Now we need to see if the pattern shifts right
+            BF_same = FindImageSameness(self.B, self.F)
+            FG_same = FindImageSameness(self.F, self.G)
+            if FuzzyAreImagesEqual(BF_same, self.F) and FuzzyAreImagesEqual(FG_same, self.G):
+                CD_same = FindImageSameness(self.C, self.D)
+                DH_same = FindImageSameness(self.D, self.H)
+                if FuzzyAreImagesEqual(CD_same, self.D) and FuzzyAreImagesEqual(DH_same, self.H):
+                    GH_same = FindImageSameness(self.G, self.H)
+                    AB_xor = FindImageXOR(self.A, self.B)                    
+                    guess = ImageChops.difference(GH_same, AB_xor)
+                    answer, diff = self.CompareGuessToAnswers(guess)
+                    print self.rpm.name, " Pattern along row, shift right"
+                    return answer, 1.0-diff
+                
         # Case Basic C-05: Star with circles
         # An AND of the images might work. 
         # This also has some false positives. Might need to move it further down        
-        guess = self.ANDOfAllQuestions()
+        guess = self.LogicalANDOfAllQuestions()
         answer, diff = self.CompareGuessToAnswers(guess.convert("RGBA"))
         if FuzzyCompare(diff, 0.0, 0.03):
             print self.rpm.name, " AND of all questions"
@@ -309,30 +333,26 @@ class Agent:
         # Split C or G in half. Refection to get complete diamond, crop to get only the diamond
         # Combine new halves to get solution
 
-        # Case Basic D-04: Heart, star,cross
-        # Here I need to find what is the same along a column and find
-        # what is the same along a row. These two elements then need to be combined
-        # to generate the answer
-        # I know pillow has and AND function, but I haven't gotten it to work yet
-
-        # Case Basic D-05: square, diamond, hexagon
-        # This is similar to D-04. Finding what stays the same along a column should
-        # be easy. However, the "sameness" along the row is harder. Maybe I can take
-        # the sameness from the columns, subtract it from G and then take that difference
-        # and combine it with the sameness from the last column to produce the guess
-
-
-        # Case Basic D-06: Shift right with sameness along row
-        # Find sameness along a row. Remove sameness from a row to get a shape. Determine
-        # if that shape shifts. If so, take sameness along bottom row and shifted image. 
-        # Combine to generate answer
-
-
+        # Case Basic D-04: 
+        # Case Basic D-05
+        AB_same = FindImageSameness(self.A, self.B)
+        BC_same = FindImageSameness(self.B, self.C)
+        if FuzzyAreImagesEqual(AB_same, BC_same):
+            AD_same = FindImageSameness(self.A, self.D)
+            DG_same = FindImageSameness(self.D, self.G)
+            if FuzzyAreImagesEqual(AD_same, DG_same):
+                GH_same = FindImageSameness(self.G, self.H)
+                CF_same = FindImageSameness(self.C, self.F)
+                guess = ImageChops.logical_and(GH_same, CF_same)
+                answer, diff = self.CompareGuessToAnswers(guess)
+                print self.rpm.name, " Pattern along row and column"
+                return answer, 1.0-diff
+                
         # Case Basic D-07: Shift left with shift right
         # Find sameness between A and E. That is one part of the answer. Find
         # sameness between B, F, and G. Remove sameness from B. Take this and 
         # combine with sameness between A and E to generate answer.
-
+        # Covered by all answers appear in problem but one (?)
 
         # Case Basic D-08: Shift left, shift right, shift right
         # Shapes are shifting left, outer shape is shifting right, unfill is shifting right
@@ -343,24 +363,36 @@ class Agent:
         # Case Basic D-09: shift left, shift right
         # Inner pattern shifts right. Outer shape shifts left
         # Find sameness between shifts. Combine to generate answer
-
+        # All answers appear in problem but one (?)
 
         # Case Basic D-10: Shift left, shift right
         # Inner shape shifts right, additional pattern shifts left
         # Find sameness between shifts. Combine to generate answer
-
-
-        # Case Basic D-11: Shift right
-        # Run of the mill shift right
+        BF_same = FindImageSameness(self.B, self.F)
+        BG_same = FindImageSameness(self.B, self.G)
+        CD_same = FindImageSameness(self.C, self.D)
+        DH_same = FindImageSameness(self.D, self.H)
+        if FuzzyAreImagesEqual(BF_same, BF_same) and FuzzyAreImagesEqual(CD_same, DH_same):
+            # We have established there is a shift right
+            # Now see if there is a shift left
+            AF_same = FindImageSameness(self.A, self.F)
+            FH_same = FindImageSameness(self.F, self.H)
+            CG_same = FindImageSameness(self.C, self.G)
+            EG_same = FindImageSameness(self.E, self.G)
+            if FuzzyAreImagesEqual(AF_same, FH_same) and FuzzyAreImagesEqual(CG_same, EG_same):
+                # We have established there is a shift left
+                # We need to combine the two in order to form an answer
+                AE_same = FindImageSameness(self.A, self.E)
+                BD_same = FindImageSameness(self.B, self.D)
+                guess = FindLogicalAND(AE_same, BD_same)
+                answer, diff = self.CompareGuessToAnswers(guess)
+                return answer, 1.0-diff
 
         # Case Basic D-12: Shifting shapes and counts
         # I don't think I can solve this visually. It requires counting the number
         # of shapes that are present which is simply not possible this this project
         # I think the only way to solve this in a reasonable timeframe
         # is with verbal descriptions
-
-
-
 
         return -1, 0.0
     #end def
@@ -616,15 +648,15 @@ class Agent:
         return answer, confidence
 
     #********************************************************************
-    # Finds the difference of all the questions in the RPM
+    # Finds difference of all the questions in the RPM
     #********************************************************************
-    def ANDOfAllQuestions(self):
+    def LogicalANDOfAllQuestions(self):
         and_img = self.questions[0].convert("1")
 
         for i in range(1,8):
             temp_img = self.questions[i].convert("1")
             and_img = ImageChops.logical_and(and_img, temp_img)
-
+           
         return and_img
 
     #********************************************************************
@@ -886,4 +918,22 @@ def FindImageSameness(imgA, imgB):
 
     # Simply applying AND results in similar areas being white and difference areas being black
     
+    return ImageChops.logical_or(tempA, tempB)
+
+#****************************************************************************************
+# Returns XOR of two images
+#****************************************************************************************
+def FindImageXOR(imgA, imgB):
+    tempA = imgA.convert("1")
+    tempB = imgB.convert("1")
+
+    return ImageChops.logical_xor(tempA, tempB)
+
+#****************************************************************************************
+# Logical and of two images
+#****************************************************************************************
+def FindLogicalAND(imgA, imgB):
+    tempA = imgA.convert("1")
+    tempB = imgB.convert("1")
+
     return ImageChops.logical_and(tempA, tempB)
