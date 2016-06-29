@@ -245,8 +245,10 @@ class Agent:
             rotatedF = self.F.copy().rotate(270)
             rotatedF = rotatedF.convert("1")
             binaryH = self.H.copy().convert("1")
-            guess = ImageChops.logical_and(rotatedF, binaryH)
-            answer, diff = self.CompareGuessToAnswers(guess.convert("RGBA"))
+            guess = ImageChops.logical_or(rotatedF, binaryH)
+            guess = guess.convert("RGBA")
+            guess_blur = guess.filter(ImageFilter.MinFilter())            
+            answer, diff = self.CompareGuessToAnswers(guess_blur)
             if FuzzyCompare(diff, 0.0, 0.05):
                 print self.rpm.name, " Basic C-08"
                 return answer, 1.0-diff
@@ -308,11 +310,7 @@ class Agent:
         # Case Basic C-06
         # Again, it looks like I would have to synthesize the answer
         # Here I can cheat a little bit. All the answers but one appear in the problem itself
-        # I can simply choose the answer that does not appear in the question
-        '''
-        I might need to rethink my image difference function. The percentages are just not fine enough to compare
-        Or I can move this down to the bottom.
-        '''        
+        # I can simply choose the answer that does not appear in the question      
         guess, confidence = self.AllAnswersAppearInProblemButOne()
         if guess != -1:
             print self.rpm.name, " All answers appear in problem but one"
@@ -634,7 +632,6 @@ class Agent:
 
         for i in range(0,8):
             for j in range(0,8):
-                #print "Question " (i+1) + " Answer " + (j+1) + " Are equal = " + FuzzyAreImagesEqual(self.questions[i], self.answerList[i])
                 if FuzzyAreImagesEqual(self.questions[i], self.answerList[j], 0.05):
                     # Remove j from list of possible answers
                     if (j+1) in possibleAnswers:
