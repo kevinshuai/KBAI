@@ -191,20 +191,6 @@ class Agent:
     # find the best solution to for a 3x3 RPM
     def Solve3x3RPM(self):
         '''
-        Cognition
-        I am trying to solve the way I solve them. I look at the question and derive a pattern.
-        Then I visualize what I think the answer is and attempt to describe this verbally. Then
-        I look at the answers and find which one matches best.
-
-        The good thing about there being so many more transformations here is that finding a 
-        false positive is much less likely. As such, I don't think I am going to do what my
-        initial inclination was - have a big if block based on the problem name. I think 
-        instead I will simply do a transform, see if it matches reasonably well with an
-        answer, and then skip all the other transforms if it matches. So a good match
-        short circuits the processing. I am assuming that the questions are posed in 
-        in alphanumeric order. If none of the transformations result in anything
-        with a sufficient confidence, return an "I don't know"
-
         I think I need to move from specific to general. If I have too general of a method
         I will have false positives. If I have a unique solution to a problem it should go
         first
