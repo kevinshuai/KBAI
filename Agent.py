@@ -23,6 +23,9 @@ class Agent:
     # Do not add any variables to this signature; they will not be used by
     # main().
     def __init__(self):
+        self.sizes = [ "very small", "small", "medium", "large", "very large", "huge"]
+        self.figures_3x3 = [ "A", "B", "C", "D", "E", "F", "G", "H" ] 
+        self.answers_3x3 = [ "1", "2", "3", "4", "5", "6", "7", "8" ]
         pass
 
     # The primary method for solving incoming Raven's Progressive Matrices.
@@ -301,6 +304,105 @@ class Agent:
         if guess != -1:
             print self.rpm.name, " All answers appear in problem but one"
             return guess, confidence 
+
+
+        # Right here is where I can test for C-02, C-03, and C-04
+        # These have verbal descriptions and I can't think of a way to
+        # solve them visually. They all match the BisectAndSwap case, so their tests
+        # need to be before that one. 
+        if self.rpm.hasVerbal:
+            # C-02
+            # If the number of objects in each figure is the same
+            # and one of those objects is the same amongst all of them
+            # If each figure in adjacent columns has a shape that is one step larger
+            # than the previous one
+            # Choose answer that has the same element and the figure that is one larger
+            # (I feel like this will be a lot of for loops)
+            num_objects = len(self.rpm.figures["A"].objects)
+            num_objects_same = True
+            for figure_name in self.figures_3x3:
+                figure = self.rpm.figures[figure_name]
+
+                num_objects_same = (num_objects == len(figure.objects)) and num_objects_same
+            #end for
+
+            # If the number of objects is the same
+            if num_objects_same:
+                # Find the common object
+                common_object = 0
+                for object_name_A in self.rpm.figures["A"].objects:
+                    for object_name_B in self.rpm.figures["B"].objects:
+                        objectA = self.rpm.figures["A"].objects[object_name_A]
+                        objectB = self.rpm.figures["B"].objects[object_name_B]
+
+                        # If all the attributes are equal, then we have found the common object 
+                        if AreObjectAttributesEqual(objectA, objectB):
+                            common_object = objectA
+                #end for
+
+                # Now that the common object has been found, look for the answer
+                for answer_name in self.answers_3x3:
+                    answer = self.rpm.figures[answer_name]
+
+                    # If the number of objects agrees
+                    if num_objects == len(answer.objects):
+                        # Go through each object
+                        contains_huge = False
+                        contains_common_object = False
+                        for object_name in answer.objects:
+                            object = answer.objects[object_name]
+                            
+                            if AreObjectAttributesEqual(common_object, object):
+                                contains_common_object = True
+
+                            if "size" in object.attributes and object.attributes["size"] == "huge":
+                                contains_huge = True
+                        #end for
+
+                        if contains_common_object and contains_huge:
+                            answer = int(answer_name)
+                            confidence = 1.0
+                            return answer, confidence
+
+
+            #end if
+
+            # C-03, C-04
+            # If the shapes of all objects in all the figures are the same
+            # Count the number of objects. It is the number of objects in the first 
+            # figure in the row times the column number. 1, 2, 3; 2, 4, 6; 3, 6, 9
+            # If this pattern holds for the first two rows, look for the answer appropriately
+            all_shapes_same = True
+            shape = self.rpm.figures["A"].objects["a"].attributes["shape"]
+
+            for figure_name in self.figures_3x3:
+                figure = self.rpm.figures[figure_name]
+
+                for object_name in figure.objects:
+                    obj = figure.objects[object_name]
+                    all_shapes_same = (shape == obj.attributes["shape"]) and all_shapes_same
+            #end for
+
+            if (len(self.rpm.figures["B"].objects) == 2*len(self.rpm.figures["A"].objects)) and (len(self.rpm.figures["C"].objects) == 3*len(self.rpm.figures["A"].objects)):
+                if (len(self.rpm.figures["E"].objects) == 2*len(self.rpm.figures["D"].objects)) and (len(self.rpm.figures["F"].objects) == 3*len(self.rpm.figures["D"].objects)):
+                    # We have established a pattern. Now find the answer that matches the shape and the number of objects that should be present. 
+                    num_objects = 3*len(self.rpm.figures["G"].objects)
+                    
+                    for answer_name in self.answers_3x3:
+                        answer = self.rpm.figures[answer_name]
+                        
+                        answer_shapes_match_original_shape = True
+                        for object_name in answer.objects:
+                            obj = answer.objects[object_name]
+                            answer_shapes_match_original_shape = (shape == obj.attributes["shape"]) and answer_shapes_match_original_shape
+
+                        if answer_shapes_match_original_shape:
+                            if num_objects == len(answer.objects):
+                                answer = int(answer_name)
+                                confidence = 1.0
+
+                                return answer, confidence
+            #end if
 
         # Case Basic C-09: Travelling triangles/stars
         # Bisect image. Combine image with halves swapped
@@ -920,3 +1022,29 @@ def FindLogicalAND(imgA, imgB):
     tempB = imgB.convert("1")
 
     return ImageChops.logical_and(tempA, tempB)
+
+
+#****************************************************************************************
+# Compare object attributes
+#****************************************************************************************
+def AreObjectAttributesEqual(objA, objB):
+
+    # Compare attributes
+    attributes_equal = True
+    keys = objA.attributes.keys()
+    for key in keys:
+        if key in objB.attributes:
+            attibutes_equal = (objA.attributes[key] == objB.attributes[key]) and attributes_equal
+        else:
+            # If an attribute is not present, the objects can't be equal
+            attributes_equal = False
+
+    keys = objB.attributes.keys()
+    for key in keys:
+        if key in objA.attributes:
+            attibutes_equal = (objA.attributes[key] == objB.attributes[key]) and attributes_equal
+        else:
+            # If an attribute is not present, the objects can't be equal
+            attributes_equal = False
+
+    return attributes_equal
