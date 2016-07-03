@@ -346,7 +346,8 @@ class Agent:
 
                     # If the number of objects agrees
                     if num_objects == len(answer.objects):
-                        # Go through each object
+                        # Go through each object looking for huge
+                        # and the common object
                         contains_huge = False
                         contains_common_object = False
                         for object_name in answer.objects:
