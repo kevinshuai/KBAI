@@ -193,12 +193,6 @@ class Agent:
     # This method will run through a number of image transformations and attempt to
     # find the best solution to for a 3x3 RPM
     def Solve3x3RPM(self):
-        '''
-        I think I need to move from specific to general. If I have too general of a method
-        I will have false positives. If I have a unique solution to a problem it should go
-        first
-        '''
-
         # Case Basic C-01 and D-01: both rows are equal. Look for answer identical to any image in third row
         if self.EqualAlongFirstTwoRows():
             guess_img =  self.G.copy()
@@ -250,18 +244,6 @@ class Agent:
             answer, diff = self.CompareGuessToAnswers(guess)
             print self.rpm.name, " Basic shift right"
             return answer, 1.0-diff
-        
-        # Case Basic C-02: Growing square
-        # I don't have a good way to handle this. I need a way to create a new image rather
-        # than just manipulate an existing one. This is hard to do since I don't know what is
-        # guaranteed on the out of sample set.
-        # Maybe consult the verbal description
-        # ImageDraw
-
-        # Case Basic C-03: Multiplying diamonds
-        #if "Basic Problem C-03" in self.rpm.name:
-        #   img = FindImageSameness(self.A, self.B)
-        #   img.show()
 
         # Case Basic D-06: Shift right with sameness along row
         # Find sameness along a row. Remove sameness from a row to get a shape. Determine
@@ -297,9 +279,12 @@ class Agent:
 
         # Case Basic C-04: Intersecting circles
         # Case Basic C-06
+        # Case Basic D-07
+        # Case Basic D-09
         # Again, it looks like I would have to synthesize the answer
         # Here I can cheat a little bit. All the answers but one appear in the problem itself
-        # I can simply choose the answer that does not appear in the question      
+        # I can simply choose the answer that does not appear in the question  
+        # TODO: This is a really cheap way to get the answer. Doesn't really apply well beyond this    
         guess, confidence = self.AllAnswersAppearInProblemButOne()
         if guess != -1:
             print self.rpm.name, " All answers appear in problem but one"
@@ -364,8 +349,6 @@ class Agent:
                             answer = int(answer_name)
                             confidence = 1.0
                             return answer, confidence
-
-
             #end if
 
             # C-03, C-04
@@ -405,15 +388,7 @@ class Agent:
                                 return answer, confidence
             #end if
 
-        # Case Basic C-09: Travelling triangles/stars
-        # Bisect image. Combine image with halves swapped
-        # This might need cleaned up a bit. It answers too many incorrectly
-        guess = BisectAndSwap(self.G)
-        answer, diff = self.CompareGuessToAnswers(guess)
-        # This is really fuzzy. It needs moved to the bottom
-        if FuzzyCompare(diff, 0.0, 0.09):
-            print self.rpm.name, " Bisect and swap"
-            return answer, 1.0-diff
+        
 
         # Case Basic C-10: Multiplying spreading diamonds
         # B and D are rotations, C and G are rotations, F and H are rotations
@@ -473,13 +448,69 @@ class Agent:
                 BD_same = FindImageSameness(self.B, self.D)
                 guess = FindLogicalAND(AE_same, BD_same)
                 answer, diff = self.CompareGuessToAnswers(guess)
+                print self.rpm.name, " Double shift"
                 return answer, 1.0-diff
 
-        # Case Basic D-12: Shifting shapes and counts
-        # I don't think I can solve this visually. It requires counting the number
-        # of shapes that are present which is simply not possible this this project
-        # I think the only way to solve this in a reasonable timeframe
-        # is with verbal descriptions
+
+        # Case Basic E-01: Should be covered by AND of all question
+
+        # Case Basic E-02: Should be covered by AND of all questions
+
+        # Case Basic E-03: Should be covered by AND of all questions
+
+        # Case Basic E-04: No idea
+
+        # Case Basic E-05
+        # Find similarity between A and D. Subtract from A. Compare to G
+        # Find similarity between B and E. Subtract from B. Compare to H
+        # Find similarity between C and F. Subtract from C. Find answer closest to guess
+
+        # Case Basic E-06: 
+        # Find similarity between A and B. Subtract from A. Compare to C
+        # Find similarity between D and E. Subtract from D. Compare to F.
+        # Find similarity between G and H. Subtract from G. Add cropped portion of center back in. Compare to answers.
+        # Maybe above it would be better to find similarity, then wash out the center of the image, and then do the
+        # subtraction
+
+        # Case Basic E-07
+        # Case Basic E-08
+        # Keep only what is unique among the problems
+        # Find similarity between A and B. Remove similarity from both A and B. Combine. Compare to C
+        # Find similarity between D and E. Remove similarity from both D and E. Combine. Compare to F.
+        # Find similarity between G and H. Remove similarity from both G and H. Combine. Compare to answers
+
+        # Basic E-09
+        # Split image into top and bottom
+        # Take top of image in first column and bottom of image in second column
+        # Compare to image in third column
+
+        # Basic E-10
+        # Basic E-11
+        # Take only what is common to images in both columns
+        # Find similarity between A and B. Compare to C
+        # Find similarity between D and E. Compare to F
+        # Find similarity between G and H. Compare to answers
+
+        # Basic E-12
+        # No discernable pattern. 
+
+        '''
+        My strategy means my agent is no smarter than I am. It will not be able to answer problems
+        that I cannot answer (unless a guess just happens to be right). 
+        '''
+
+
+        # Case Basic C-09: Travelling triangles/stars
+        # Case Basic D-08
+        # Case Basic D-12
+        # Bisect image. Combine image with halves swapped
+        # This might need cleaned up a bit. It answers too many incorrectly
+        guess = BisectAndSwap(self.G)
+        answer, diff = self.CompareGuessToAnswers(guess)
+        # This is really fuzzy. It needs moved to the bottom
+        if FuzzyCompare(diff, 0.0, 0.09):
+            print self.rpm.name, " Bisect and swap"
+            return answer, 1.0-diff
 
         return -1, 0.0
     #end def
