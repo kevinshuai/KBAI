@@ -193,6 +193,11 @@ class Agent:
     # This method will run through a number of image transformations and attempt to
     # find the best solution to for a 3x3 RPM
     def Solve3x3RPM(self):
+        '''
+        Surprised by the amount of XORing that needs to be done. I guess that is how you can extract what is unique
+        between two images
+        '''
+        
         # Case Basic C-01 and D-01: both rows are equal. Look for answer identical to any image in third row
         if self.EqualAlongFirstTwoRows():
             guess_img =  self.G.copy()
@@ -267,8 +272,23 @@ class Agent:
                     answer, diff = self.CompareGuessToAnswers(guess)
                     print self.rpm.name, " Pattern along row, shift right"
                     return answer, 1.0-diff
-                
+        
+        # Case Basic E-07
+        # Case Basic E-08
+        # Keep only what is unique among the problems along rows - XOR
+        AB_xor = ImageChops.invert(FindImageXOR(self.A, self.B))
+        if FuzzyAreImagesEqual(AB_xor, self.C, 0.03):
+            DE_xor = ImageChops.invert(FindImageXOR(self.D, self.E))
+            if FuzzyAreImagesEqual(DE_xor, self.F, 0.03):
+                guess = ImageChops.invert(FindImageXOR(self.G, self.H))
+                answer, diff = self.CompareGuessToAnswers(guess)
+                print self.rpm.name, " Row XOR"
+                return answer, 1.0-diff        
+                        
         # Case Basic C-05: Star with circles
+        # Case Basic E-01
+        # Case Basic E-03
+        # Case Basic E-08
         # An AND of the images might work. 
         # This also has some false positives. Might need to move it further down        
         guess = self.LogicalANDOfAllQuestions()
@@ -276,6 +296,17 @@ class Agent:
         if FuzzyCompare(diff, 0.0, 0.03):
             print self.rpm.name, " AND of all questions"
             return answer, 1.0-diff
+
+        # Case Basic E-06: 
+        # XOR of rows, with the caveat of the circle in the middle
+        AB_XOR = FindImageXORandReplaceCenter(self.A, self.B)
+        if FuzzyAreImagesEqual(AB_XOR, self.C, 0.03):
+            DE_XOR = FindImageXORandReplaceCenter(self.D, self.E)
+            if FuzzyAreImagesEqual(DE_XOR, self.F, 0.03):
+                GH_XOR = FindImageXORandReplaceCenter(self.G, self.H)
+                answer, diff = self.CompareGuessToAnswers(GH_XOR)
+                print self.rpm.name, " XOR and replace center"
+                return answer, 1.0-diff
 
         # Case Basic C-04: Intersecting circles
         # Case Basic C-06
@@ -451,33 +482,22 @@ class Agent:
                 print self.rpm.name, " Double shift"
                 return answer, 1.0-diff
 
-
-        # Case Basic E-01: Should be covered by AND of all question
-
         # Case Basic E-02: Should be covered by AND of all questions
-
-        # Case Basic E-03: Should be covered by AND of all questions
+        # It is off just a little. Can't find a good filter to make it work as is
+        # Might need to add a different AND all question case to the end with more fuzziness
 
         # Case Basic E-04: No idea
 
         # Case Basic E-05
-        # Find similarity between A and D. Subtract from A. Compare to G
-        # Find similarity between B and E. Subtract from B. Compare to H
-        # Find similarity between C and F. Subtract from C. Find answer closest to guess
-
-        # Case Basic E-06: 
-        # Find similarity between A and B. Subtract from A. Compare to C
-        # Find similarity between D and E. Subtract from D. Compare to F.
-        # Find similarity between G and H. Subtract from G. Add cropped portion of center back in. Compare to answers.
-        # Maybe above it would be better to find similarity, then wash out the center of the image, and then do the
-        # subtraction
-
-        # Case Basic E-07
-        # Case Basic E-08
-        # Keep only what is unique among the problems
-        # Find similarity between A and B. Remove similarity from both A and B. Combine. Compare to C
-        # Find similarity between D and E. Remove similarity from both D and E. Combine. Compare to F.
-        # Find similarity between G and H. Remove similarity from both G and H. Combine. Compare to answers
+        # XOR of columns
+        AD_XOR = ImageChops.invert( ImageChops.logical_xor(self.A.convert("1"), self.D.convert("1")))
+        if FuzzyAreImagesEqual(AD_XOR, self.G, 0.03):
+            BE_XOR = ImageChops.invert( ImageChops.logical_xor(self.B.convert("1"), self.E.convert("1")))
+            if FuzzyAreImagesEqual(BE_XOR, self.H, 0.03):
+                CF_XOR = ImageChops.invert(ImageChops.logical_xor(self.C.convert("1"), self.F.convert("1")))
+                answer, diff = self.CompareGuessToAnswers(CF_XOR)
+                print self.rpm.name, " Column XOR"
+                return answer, 1.0-diff
 
         # Basic E-09
         # Split image into top and bottom
@@ -1045,6 +1065,26 @@ def FindImageXOR(imgA, imgB):
     tempB = imgB.convert("1")
 
     return ImageChops.logical_xor(tempA, tempB)
+
+#****************************************************************************************
+# Finds the XOR between 2 images and replaces the center from image B
+#****************************************************************************************
+def FindImageXORandReplaceCenter(imgA, imgB):
+    img_xor = ImageChops.invert(FindImageXOR(imgA, imgB)).convert("RGBA")
+
+    # Clean up xor image
+    img_xor = img_xor.filter(ImageFilter.MaxFilter())
+    img_xor = img_xor.filter(ImageFilter.MinFilter())
+
+    # Put the center back
+    width = img_xor.size[0]
+    height = img_xor.size[1]
+    bbox = (width/2 - 20, height/2 - 20, width/2 + 20, height/2 + 20)
+    img_center = imgB.crop(bbox)
+    img_xor.paste(img_center, bbox)
+
+    return img_xor
+
 
 #****************************************************************************************
 # Logical and of two images
