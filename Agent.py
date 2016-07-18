@@ -285,6 +285,22 @@ class Agent:
                 print self.rpm.name, " Row XOR"
                 return answer, 1.0-diff        
                         
+        # Basic E-10
+        # Basic E-11
+        # Take only what is common to images in both columns
+        # Find similarity between A and B. Compare to C
+        # Find similarity between D and E. Compare to F
+        # Find similarity between G and H. Compare to answers
+        AB_similarity = FindImageSameness(self.A, self.B)
+        if FuzzyAreImagesEqual(AB_similarity, self.C):
+            DE_similarity = FindImageSameness(self.D, self.E)
+            if FuzzyAreImagesEqual(DE_similarity, self.F):
+                print self.rpm.name, " Row sameness"
+                GH_similarity = FindImageSameness(self.G, self.H)
+                answer, diff = self.CompareGuessToAnswers(GH_similarity)
+                return answer, 1.0-diff
+            
+            
         # Case Basic C-05: Star with circles
         # Case Basic E-01
         # Case Basic E-03
@@ -503,16 +519,17 @@ class Agent:
         # Split image into top and bottom
         # Take top of image in first column and bottom of image in second column
         # Compare to image in third column
-
-        # Basic E-10
-        # Basic E-11
-        # Take only what is common to images in both columns
-        # Find similarity between A and B. Compare to C
-        # Find similarity between D and E. Compare to F
-        # Find similarity between G and H. Compare to answers
+        AD_swap = CombineTopAndBottom(self.A, self.D)
+        if FuzzyAreImagesEqual(AD_swap, self.G):
+            BE_swap = CombineTopAndBottom(self.B, self.E)
+            if FuzzyAreImagesEqual(BE_swap, self.H):
+                CF_swap = CombineTopAndBottom(self.C, self.F)
+                print self.rpm.name, " Combine top and bottom"
+                answer, diff = self.CompareGuessToAnswers(CF_swap)
+                return answer, 1.0-diff
 
         # Basic E-12
-        # No discernable pattern. 
+        # No discernable pattern 
 
         '''
         My strategy means my agent is no smarter than I am. It will not be able to answer problems
@@ -1013,6 +1030,26 @@ def BisectAndSwap(image):
     swap_img.paste(left_half, bbox_right)
 
     return swap_img
+
+#********************************************************************************
+# Takes the top half of image top and the bottom half of image bottom and 
+# combines them into one image
+#********************************************************************************
+def CombineTopAndBottom(top, bottom):
+    width = top.size[0]
+    height = top.size[1]
+
+    bbox_top = (0, 0, width, height/2)
+    top_half = top.crop(bbox_top)
+
+    bbox_bottom = (0, height/2, width, height)
+    bottom_half = bottom.crop(bbox_bottom)
+
+    combined_img = Image.new("RGBA", (width, height))
+    combined_img.paste(top_half, bbox_top)
+    combined_img.paste(bottom_half, bbox_bottom)
+
+    return combined_img
 
 #*******************************************************************************
 # Returns true if the difference along the rows across columns is all the same
