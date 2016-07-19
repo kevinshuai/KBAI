@@ -282,9 +282,11 @@ class Agent:
             if FuzzyAreImagesEqual(DE_xor, self.F, 0.03):
                 guess = ImageChops.invert(FindImageXOR(self.G, self.H))
                 answer, diff = self.CompareGuessToAnswers(guess)
-                print self.rpm.name, " Row XOR"
-                return answer, 1.0-diff        
+                if FuzzyCompare(diff, 0.0, 0.03):
+                    print self.rpm.name, " Row XOR"
+                    return answer, 1.0-diff        
                         
+                
         # Basic E-10
         # Basic E-11
         # Take only what is common to images in both columns
@@ -299,8 +301,40 @@ class Agent:
                 GH_similarity = FindImageSameness(self.G, self.H)
                 answer, diff = self.CompareGuessToAnswers(GH_similarity)
                 return answer, 1.0-diff
-            
-            
+        
+        # Case Basic E-06: 
+        # XOR of rows, with the caveat of the circle in the middle
+        AB_XOR = FindImageXORandReplaceCenter(self.A, self.B)
+        if FuzzyAreImagesEqual(AB_XOR, self.C, 0.03):
+            DE_XOR = FindImageXORandReplaceCenter(self.D, self.E)
+            if FuzzyAreImagesEqual(DE_XOR, self.F, 0.03):
+                GH_XOR = FindImageXORandReplaceCenter(self.G, self.H)
+                answer, diff = self.CompareGuessToAnswers(GH_XOR)
+                if "E-03" in self.rpm.name:
+                    print " Diff ", diff
+                if FuzzyCompare(diff, 0.0, 0.025):
+                    print self.rpm.name, " XOR rows and replace center"
+                    return answer, 1.0-diff    
+             
+        # Case Basic E-07
+        # XOR of columns, with some fill
+        AD_XOR = ImageChops.invert(FindImageXOR(self.A, self.D))
+        # Clean up image and fill in center
+        AD_XOR = AD_XOR.filter(ImageFilter.MaxFilter(7))
+        AD_XOR = AD_XOR.filter(ImageFilter.MinFilter(7))
+        AD_XOR = AD_XOR.filter(ImageFilter.MinFilter(15))
+        AD_XOR = AD_XOR.filter(ImageFilter.MaxFilter(15))
+        if FuzzyAreImagesEqual(AD_XOR, self.G):
+            BE_XOR = ImageChops.invert(FindImageXOR(self.B, self.E))
+            BE_XOR = BE_XOR.filter(ImageFilter.MaxFilter)
+            BE_XOR = BE_XOR.filter(ImageFilter.MinFilter)
+            if FuzzyAreImagesEqual(BE_XOR, self.H):
+                CF_XOR = ImageChops.invert(FindImageXOR(self.C, self.F))
+                answer, diff = self.CompareGuessToAnswers(CF_XOR)
+                print self.rpm.name, " Column XOR with fill"
+                return answer, 1.0-diff
+        
+
         # Case Basic C-05: Star with circles
         # Case Basic E-01
         # Case Basic E-03
@@ -313,15 +347,17 @@ class Agent:
             print self.rpm.name, " AND of all questions"
             return answer, 1.0-diff
 
-        # Case Basic E-06: 
-        # XOR of rows, with the caveat of the circle in the middle
-        AB_XOR = FindImageXORandReplaceCenter(self.A, self.B)
-        if FuzzyAreImagesEqual(AB_XOR, self.C, 0.03):
-            DE_XOR = FindImageXORandReplaceCenter(self.D, self.E)
-            if FuzzyAreImagesEqual(DE_XOR, self.F, 0.03):
-                GH_XOR = FindImageXORandReplaceCenter(self.G, self.H)
-                answer, diff = self.CompareGuessToAnswers(GH_XOR)
-                print self.rpm.name, " XOR and replace center"
+        # Case Basic E-05
+        # XOR of columns
+        AD_XOR = ImageChops.invert( ImageChops.logical_xor(self.A.convert("1"), self.D.convert("1")))
+        if FuzzyAreImagesEqual(AD_XOR, self.G, 0.03):
+            BE_XOR = ImageChops.invert( ImageChops.logical_xor(self.B.convert("1"), self.E.convert("1")))
+            if "E-07" in self.rpm.name:
+                BE_XOR.show()
+            if FuzzyAreImagesEqual(BE_XOR, self.H, 0.03):
+                CF_XOR = ImageChops.invert(ImageChops.logical_xor(self.C.convert("1"), self.F.convert("1")))
+                answer, diff = self.CompareGuessToAnswers(CF_XOR)
+                print self.rpm.name, " Column XOR"
                 return answer, 1.0-diff
 
         # Case Basic C-04: Intersecting circles
@@ -506,6 +542,7 @@ class Agent:
 
         # Case Basic E-05
         # XOR of columns
+        '''
         AD_XOR = ImageChops.invert( ImageChops.logical_xor(self.A.convert("1"), self.D.convert("1")))
         if FuzzyAreImagesEqual(AD_XOR, self.G, 0.03):
             BE_XOR = ImageChops.invert( ImageChops.logical_xor(self.B.convert("1"), self.E.convert("1")))
@@ -514,6 +551,7 @@ class Agent:
                 answer, diff = self.CompareGuessToAnswers(CF_XOR)
                 print self.rpm.name, " Column XOR"
                 return answer, 1.0-diff
+        '''
 
         # Basic E-09
         # Split image into top and bottom
@@ -535,6 +573,15 @@ class Agent:
         My strategy means my agent is no smarter than I am. It will not be able to answer problems
         that I cannot answer (unless a guess just happens to be right). 
         '''
+
+        # Case Basic E-02: Should be covered by AND of all questions
+        # It is off just a little. Can't find a good filter to make it work as is
+        # Might need to add a different AND all question case to the end with more fuzziness
+        guess = self.LogicalANDOfAllQuestions()
+        answer, diff = self.CompareGuessToAnswers(guess.convert("RGBA"))
+        if FuzzyCompare(diff, 0.0, 0.05):
+            print self.rpm.name, " AND of all questions"
+            return answer, 1.0-diff
 
 
         # Case Basic C-09: Travelling triangles/stars
