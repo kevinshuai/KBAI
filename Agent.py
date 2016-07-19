@@ -534,24 +534,7 @@ class Agent:
                 print self.rpm.name, " Double shift"
                 return answer, 1.0-diff
 
-        # Case Basic E-02: Should be covered by AND of all questions
-        # It is off just a little. Can't find a good filter to make it work as is
-        # Might need to add a different AND all question case to the end with more fuzziness
-
         # Case Basic E-04: No idea
-
-        # Case Basic E-05
-        # XOR of columns
-        '''
-        AD_XOR = ImageChops.invert( ImageChops.logical_xor(self.A.convert("1"), self.D.convert("1")))
-        if FuzzyAreImagesEqual(AD_XOR, self.G, 0.03):
-            BE_XOR = ImageChops.invert( ImageChops.logical_xor(self.B.convert("1"), self.E.convert("1")))
-            if FuzzyAreImagesEqual(BE_XOR, self.H, 0.03):
-                CF_XOR = ImageChops.invert(ImageChops.logical_xor(self.C.convert("1"), self.F.convert("1")))
-                answer, diff = self.CompareGuessToAnswers(CF_XOR)
-                print self.rpm.name, " Column XOR"
-                return answer, 1.0-diff
-        '''
 
         # Basic E-09
         # Split image into top and bottom
