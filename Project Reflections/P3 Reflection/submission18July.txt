@@ -1,0 +1,97 @@
+Basic Problems B": {
+        "Incorrect": "2",
+        "Skipped": "0",
+        "Correct": "10",
+        "Set": "Basic Problems B"
+    },
+    "Ravens Problems D": {
+        "Incorrect": "6",
+        "Skipped": "5",
+        "Correct": "1",
+        "Set": "Ravens Problems D"
+    },
+    "Test Problems D": {
+        "Incorrect": "4",
+        "Skipped": "3",
+        "Correct": "5",
+        "Set": "Test Problems D"
+    },
+    "Ravens Problems B": {
+        "Incorrect": "5",
+        "Skipped": "0",
+        "Correct": "7",
+        "Set": "Ravens Problems B"
+    },
+    "Test Problems B": {
+        "Incorrect": "3",
+        "Skipped": "0",
+        "Correct": "9",
+        "Set": "Test Problems B"
+    },
+    "Basic Problems D": {
+        "Incorrect": "2",
+        "Skipped": "0",
+        "Correct": "10",
+        "Set": "Basic Problems D"
+    },
+    "Basic Problems C": {
+        "Incorrect": "1",
+        "Skipped": "1",
+        "Correct": "10",
+        "Set": "Basic Problems C"
+    },
+    "Challenge Problems B": {
+        "Incorrect": "9",
+        "Skipped": "0",
+        "Correct": "3",
+        "Set": "Challenge Problems B"
+    },
+    "Test Problems E": {
+        "Incorrect": "4",
+        "Skipped": "0",
+        "Correct": "8",
+        "Set": "Test Problems E"
+    },
+    "Challenge Problems E": {
+        "Incorrect": "7",
+        "Skipped": "3",
+        "Correct": "2",
+        "Set": "Challenge Problems E"
+    },
+    "Challenge Problems D": {
+        "Incorrect": "5",
+        "Skipped": "5",
+        "Correct": "2",
+        "Set": "Challenge Problems D"
+    },
+    "Ravens Problems E": {
+        "Incorrect": "5",
+        "Skipped": "3",
+        "Correct": "4",
+        "Set": "Ravens Problems E"
+    },
+    "Challenge Problems C": {
+        "Incorrect": "9",
+        "Skipped": "2",
+        "Correct": "1",
+        "Set": "Challenge Problems C"
+    },
+    "Basic Problems E": {
+        "Incorrect": "1",
+        "Skipped": "1",
+        "Correct": "10",
+        "Set": "Basic Problems E"
+    },
+    "Test Problems C": {
+        "Incorrect": "4",
+        "Skipped": "1",
+        "Correct": "7",
+        "Set": "Test Problems C"
+    },
+    "Ravens Problems C": {
+        "Incorrect": "6",
+        "Skipped": "4",
+        "Correct": "2",
+        "Set": "Ravens Problems C"
+    }
+}
